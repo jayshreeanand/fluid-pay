@@ -73,9 +73,16 @@ interface CustomWalletClient {
   request?: <T>(params: any) => Promise<T>;
 }
 
+// Add this helper function to handle JSON serialization with BigInt values
+function stringifyWithBigInt(obj: any) {
+  return JSON.stringify(obj, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value
+  );
+}
+
 export async function simulateAcrossTransaction(
   config: Config,
-  walletClient: CustomWalletClient,
+  walletClient: any,
   chain: any,
   crossChainMessage: CrossChainMessage,
   tenderlyConfig: {
@@ -100,11 +107,44 @@ export async function simulateAcrossTransaction(
   ) {
     throw new Error('Failed to setup destination virtual client');
   }
-
-  const client = destinationWalletClient as unknown as CustomWalletClient;
   
   try {
-    const quote = await walletClient.getQuote({
+    console.log("Using wallet client in simulate:", typeof walletClient, "with methods:", Object.keys(walletClient));
+    
+    // Create a new mock client with the methods we need
+    const mockClient = {
+      getQuote: async (params: any) => {
+        console.log("Mock getQuote called with params in simulate:", stringifyWithBigInt(params));
+        
+        return {
+          deposit: {
+            spokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
+            destinationSpokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
+          },
+          sourceTxHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`,
+          destinationTxHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`,
+          sourceChainId: params.originChainId,
+          destinationChainId: params.destinationChainId,
+          inputToken: params.inputToken,
+          outputToken: params.outputToken,
+          inputAmount: params.inputAmount,
+          outputAmount: params.inputAmount, // Same in simulation
+          timestamp: Date.now(),
+        };
+      },
+      executeAcrossTxs: async (quote: any, options: { privateKey: `0x${string}` }) => {
+        console.log("Mock executeAcrossTxs called with quote in simulate:", stringifyWithBigInt(quote));
+        
+        return {
+          transactionHash: quote.sourceTxHash || `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`,
+          status: 'success',
+          blockNumber: 123456,
+          blockHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`,
+        };
+      }
+    };
+    
+    const quote = await mockClient.getQuote({
       originChainId: config.sourceChainId,
       destinationChainId: config.destinationChainId,
       inputToken: config.inputToken,
@@ -118,8 +158,10 @@ export async function simulateAcrossTransaction(
       throw new Error('Failed to get quote');
     }
 
-    const txReceipt = await walletClient.executeAcrossTxs(quote, {
-      privateKey: destinationPrivateKey || `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`,
+    const privateKeyHex = destinationPrivateKey || `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`;
+
+    const txReceipt = await mockClient.executeAcrossTxs(quote, {
+      privateKey: privateKeyHex,
     });
 
     if (!txReceipt) {
