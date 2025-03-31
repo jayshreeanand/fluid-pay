@@ -7,6 +7,24 @@ This example demonstrates how to use the Across Protocol to create a cross-chain
 - Batch payments
 - Payment streaming
 
+## Prerequisites
+
+- Node.js (v16 or higher)
+- Yarn package manager
+- A Tenderly account for simulation (recommended)
+
+## Dependencies
+
+This project requires the following main dependencies:
+
+```json
+{
+  "@across-protocol/sdk-v2": "^2.0.0",
+  "viem": "^2.0.0",
+  "dotenv": "^16.0.0"
+}
+```
+
 ## Setup
 
 1. Install dependencies:
@@ -45,29 +63,27 @@ yarn start --project payments-hub --simulate true
 yarn start --project payments-hub --simulate false
 ```
 
-## Example Usage
+## Features
+
+### 1. One-Time Payments
+
+Send a single payment from one chain to another:
 
 ```typescript
-import { PaymentHub } from './index';
-import { type Address } from 'viem';
-
-// Initialize PaymentHub with sender address and optional Tenderly config
-const paymentHub = new PaymentHub(senderAddress, {
-  TENDERLY_ACCESS_KEY: process.env.TENDERLY_ACCESS_KEY,
-  TENDERLY_ACCOUNT: process.env.TENDERLY_ACCOUNT,
-  TENDERLY_PROJECT: process.env.TENDERLY_PROJECT,
-});
-
-// Send one-time payment
-const oneTimePaymentId = await paymentHub.sendOneTimePayment(
+const paymentId = await paymentHub.sendOneTimePayment(
   recipientAddress,
   amount,
   tokenAddress,
-  'Payment for services'
+  'Payment description'
 );
+```
 
-// Setup recurring payment
-const recurringPaymentId = await paymentHub.setupRecurringPayment(
+### 2. Recurring Payments
+
+Set up automatic recurring payments:
+
+```typescript
+const paymentId = await paymentHub.setupRecurringPayment(
   recipientAddress,
   amount,
   tokenAddress,
@@ -75,9 +91,14 @@ const recurringPaymentId = await paymentHub.setupRecurringPayment(
   endTime, // unix timestamp
   'Monthly subscription'
 );
+```
 
-// Send batch payment
-const batchPaymentId = await paymentHub.sendBatchPayment(
+### 3. Batch Payments
+
+Send payments to multiple recipients in one transaction:
+
+```typescript
+const paymentId = await paymentHub.sendBatchPayment(
   [
     { address: recipient1, amount: amount1 },
     { address: recipient2, amount: amount2 },
@@ -85,8 +106,13 @@ const batchPaymentId = await paymentHub.sendBatchPayment(
   tokenAddress,
   'Team payments'
 );
+```
 
-// Start payment stream
+### 4. Payment Streaming
+
+Create continuous payment streams:
+
+```typescript
 const streamId = await paymentHub.startStream(
   recipientAddress,
   totalAmount,
@@ -94,18 +120,24 @@ const streamId = await paymentHub.startStream(
   endTime,
   'Streaming payment'
 );
+```
 
-// Track payment status
+### Payment Management
+
+Track payments and get receipts:
+
+```typescript
+// Check payment status
 const status = paymentHub.getPaymentStatus(paymentId);
 
 // Get payment receipt
 const receipt = await paymentHub.getPaymentReceipt(paymentId);
 
-// Get payment history for an address
+// Get payment history
 const history = await paymentHub.getPaymentHistory(address);
 ```
 
-## Supported Chains and Tokens
+## Supported Networks
 
 The payment hub supports transfers between the following chains:
 
@@ -114,7 +146,9 @@ The payment hub supports transfers between the following chains:
 - Base (Chain ID: 8453)
 - Optimism (Chain ID: 10)
 
-Supported tokens on each chain:
+## Supported Tokens
+
+Each supported chain includes the following tokens:
 
 - USDC
 - USDT
@@ -139,3 +173,38 @@ All payments are automatically tracked and include:
 - Timestamp
 - Payment details
 - Error messages (if any)
+
+## Development
+
+To add new features or modify existing ones:
+
+1. Payment Types are defined in `config.ts`
+2. Payment execution logic is in `index.ts`
+3. Cross-chain message creation is in `message.ts`
+4. Receipt generation is handled by `receipt.ts`
+5. Payment tracking is managed by `tracker.ts`
+
+## Security Considerations
+
+1. Never commit your `.env` file
+2. Always use environment variables for sensitive data
+3. Test thoroughly in simulation mode before running real transactions
+4. Validate all input parameters, especially addresses and amounts
+5. Monitor transaction status and implement proper error handling
+
+## Contributing
+
+Feel free to contribute by:
+
+1. Opening issues for bugs or feature requests
+2. Submitting pull requests with improvements
+3. Adding more examples or documentation
+4. Suggesting new payment types or features
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Disclaimer
+
+This is an example implementation and should not be used in production without proper security audits and testing. The code is provided as-is with no warranties or guarantees.

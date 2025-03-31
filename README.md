@@ -1,6 +1,4 @@
-# Across SDK Examples
-
-> **IMPORTANT DISCLAIMER**: This repository is NOT maintained by the Across Protocol team and is intended for educational purposes only. The examples provided here are for demonstration and learning purposes. Use at your own risk. The maintainers of this repository assume no responsibility or liability for any errors or issues that may arise from using these examples.
+# Fluid Pay
 
 This repository demonstrates how to use the Across Protocol SDK to interact with the Across bridge, showing various examples of cross-chain token transfers and bridge interactions.
 
