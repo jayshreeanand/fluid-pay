@@ -16,6 +16,20 @@ const PAYMENT_HUB_ABI = [
   'function startStream(address recipient, address token, uint256 amount, uint256 endTime, string metadata)',
 ] as const;
 
+// ABI for ERC20 approve function
+const APPROVE_ABI = 'function approve(address spender, uint256 value)' as const;
+
+// Helper function to generate approve call data
+function generateApproveCallData(
+  spender: Address,
+  amount: bigint
+): `0x${string}` {
+  return encodeFunctionData({
+    abi: [parseAbiItem(APPROVE_ABI)],
+    args: [spender, amount],
+  });
+}
+
 export async function createCrossChainMessage(
   address: Address,
   paymentConfig?: PaymentConfig
@@ -23,18 +37,23 @@ export async function createCrossChainMessage(
   // If no payment config is provided, use default one-time payment
   const payment = paymentConfig || {
     type: PaymentType.OneTime,
+    sender: address,
     recipient: address,
     amount: config.amount,
-    token: config.outputToken,
+    token: config.outputToken as Address,
     metadata: 'Default one-time payment',
   };
+
+  if (!payment.token || !payment.recipient) {
+    throw new Error('Token and recipient are required');
+  }
 
   return {
     fallbackRecipient: address,
     actions: [
       // First action: Approve the payment hub to spend tokens
       {
-        target: config.outputToken,
+        target: payment.token,
         callData: generateApproveCallData(
           config.contractAddress,
           payment.amount
@@ -63,19 +82,12 @@ export async function createCrossChainMessage(
   };
 }
 
-// Helper function to generate approve call data
-function generateApproveCallData(
-  spender: Address,
-  amount: bigint
-): `0x${string}` {
-  return encodeFunctionData({
-    abi: [parseAbiItem('function approve(address spender, uint256 value)')],
-    args: [spender, amount],
-  });
-}
-
 // Helper function to generate payment call data based on payment type
 function generatePaymentCallData(payment: PaymentConfig): `0x${string}` {
+  if (!payment.token || !payment.recipient) {
+    throw new Error('Token and recipient are required');
+  }
+
   switch (payment.type) {
     case PaymentType.OneTime:
       return encodeFunctionData({

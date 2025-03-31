@@ -68,12 +68,13 @@ export enum PaymentStatus {
 // Configuration for different payment types
 export interface PaymentConfig {
   type: PaymentType;
-  recipient: Address;
+  sender: Address;
+  recipient?: Address;
+  recipients?: { address: Address; amount: bigint }[];
   amount: bigint;
   token: Address;
+  metadata?: string;
   // Optional fields for specific payment types
   frequency?: number; // For recurring payments (in seconds)
-  endTime?: number; // For streams and recurring payments
-  recipients?: Array<{ address: Address; amount: bigint }>; // For batch payments
-  metadata?: string; // Additional payment info (e.g., invoice number, purpose)
+  endTime?: number; // For recurring payments and streams (Unix timestamp)
 } 
