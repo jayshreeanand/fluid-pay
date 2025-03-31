@@ -215,11 +215,19 @@ export async function setupVirtualClient(
   };
 
   // Generate a random private key for the virtual client
-  const privateKey = `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`;
+  const privateKey = `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`;
 
   // This is a mock implementation for simulation purposes
   const walletClient = {
-    getQuote: async (params: any) => ({
+    getQuote: async (params: {
+      originChainId: number;
+      destinationChainId: number;
+      inputToken: Address;
+      outputToken: Address;
+      inputAmount: bigint;
+      recipient?: Address;
+      crossChainMessage?: any;
+    }) => ({
       deposit: {
         spokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
         destinationSpokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
@@ -234,7 +242,7 @@ export async function setupVirtualClient(
       outputAmount: params.inputAmount, // Same in simulation
       timestamp: Date.now(),
     }),
-    executeAcrossTxs: async (quote: any) => ({
+    executeAcrossTxs: async (quote: any, options: { privateKey: `0x${string}` }) => ({
       transactionHash: quote.sourceTxHash,
       status: 'success',
       blockNumber: 123456,
@@ -242,6 +250,9 @@ export async function setupVirtualClient(
     }),
     account: {
       address: '0x0000000000000000000000000000000000000000' as Address,
+    },
+    request: async <T>(params: any): Promise<T> => {
+      return `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as unknown as T;
     }
   };
 

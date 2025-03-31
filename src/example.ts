@@ -52,7 +52,7 @@ async function main() {
 
     // Example 3: Get payment history
     console.log('\nGetting payment history...');
-    const history = await paymentHub.getPaymentHistory(senderAddress);
+    const history = await paymentHub.getPaymentHistory();
     console.log('Payment history:', history);
 
   } catch (error) {
