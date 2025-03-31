@@ -46,14 +46,22 @@ export interface PaymentHubInterface {
   
   getPaymentStatus(paymentId: string): PaymentStatus;
   getPaymentReceipt(paymentId: string): Promise<Receipt>;
-  getPaymentHistory(address: Address): Promise<Receipt[]>;
+  getPaymentHistory(): Promise<Receipt[]>;
 }
 
 export class PaymentHub implements PaymentHubInterface {
   private readonly sender: Address;
-  private readonly tenderlyConfig?: TenderlyConfig;
+  private readonly tenderlyConfig?: {
+    TENDERLY_ACCESS_KEY: string;
+    TENDERLY_ACCOUNT: string;
+    TENDERLY_PROJECT: string;
+  };
 
-  constructor(sender: Address, tenderlyConfig?: TenderlyConfig) {
+  constructor(sender: Address, tenderlyConfig?: {
+    TENDERLY_ACCESS_KEY: string;
+    TENDERLY_ACCOUNT: string;
+    TENDERLY_PROJECT: string;
+  }) {
     this.sender = sender;
     this.tenderlyConfig = tenderlyConfig;
   }
@@ -71,6 +79,10 @@ export class PaymentHub implements PaymentHubInterface {
       amount,
       token,
       metadata,
+      sourceChainId: 8453,
+      destinationChainId: 42161,
+      inputToken: token,
+      outputToken: token,
     };
     return this.executePayment(paymentConfig);
   }
@@ -89,9 +101,13 @@ export class PaymentHub implements PaymentHubInterface {
       recipient,
       amount,
       token,
+      metadata,
+      sourceChainId: 8453,
+      destinationChainId: 42161,
+      inputToken: token,
+      outputToken: token,
       frequency,
       endTime,
-      metadata,
     };
     return this.executePayment(paymentConfig);
   }
@@ -108,6 +124,10 @@ export class PaymentHub implements PaymentHubInterface {
       token,
       amount: recipients.reduce((sum, r) => sum + r.amount, 0n),
       metadata,
+      sourceChainId: 8453,
+      destinationChainId: 42161,
+      inputToken: token,
+      outputToken: token,
     };
     return this.executePayment(paymentConfig);
   }
@@ -125,8 +145,12 @@ export class PaymentHub implements PaymentHubInterface {
       recipient,
       amount,
       token,
-      endTime,
       metadata,
+      sourceChainId: 8453,
+      destinationChainId: 42161,
+      inputToken: token,
+      outputToken: token,
+      endTime,
     };
     return this.executePayment(paymentConfig);
   }
@@ -136,11 +160,12 @@ export class PaymentHub implements PaymentHubInterface {
   }
 
   public async getPaymentReceipt(paymentId: string): Promise<Receipt> {
-    return ReceiptGenerator.generateReceipt(paymentId);
+    return generateReceipt(paymentId);
   }
 
-  public async getPaymentHistory(address: Address): Promise<Receipt[]> {
-    return paymentTracker.getPaymentHistory(address);
+  public async getPaymentHistory(): Promise<Receipt[]> {
+    const payments = paymentTracker.getPaymentHistory();
+    return Promise.all(payments.map((payment) => generateReceipt(payment.id)));
   }
 
   private async executePayment(paymentConfig: PaymentConfig): Promise<string> {
@@ -153,13 +178,21 @@ export class PaymentHub implements PaymentHubInterface {
       const message = createCrossChainMessage(paymentConfig);
 
       const result = (await executeAcrossTxs(
-        config,
+        {
+          sourceChainId: paymentConfig.sourceChainId,
+          destinationChainId: paymentConfig.destinationChainId,
+          inputToken: paymentConfig.inputToken,
+          outputToken: paymentConfig.outputToken,
+          amount: paymentConfig.amount,
+          contractAddress: '0x1234567890123456789012345678901234567890',
+          tenderly: this.tenderlyConfig,
+        },
         false,
         async () => message,
-        {
-          TENDERLY_ACCESS_KEY: this.tenderlyConfig?.TENDERLY_ACCESS_KEY || '',
-          TENDERLY_ACCOUNT: this.tenderlyConfig?.TENDERLY_ACCOUNT || '',
-          TENDERLY_PROJECT: this.tenderlyConfig?.TENDERLY_PROJECT || '',
+        this.tenderlyConfig || {
+          TENDERLY_ACCESS_KEY: '',
+          TENDERLY_ACCOUNT: '',
+          TENDERLY_PROJECT: '',
         }
       )) as ExecuteAcrossTxsResult | undefined;
 
@@ -242,7 +275,7 @@ export async function executeAcrossTxsWrapper(
 
     // Example 3: Get payment history
     console.log('\nGetting payment history...');
-    const history = await paymentHub.getPaymentHistory(senderAddress);
+    const history = await paymentHub.getPaymentHistory();
     console.log('Payment history:', history);
 
   } catch (error) {

@@ -1,41 +1,47 @@
-import { type PaymentConfig, PaymentStatus } from './config.js';
+import { type Address } from 'viem';
+import { PaymentStatus } from './config.js';
 import { paymentTracker } from './tracker.js';
 
 export interface Receipt {
-  id: string;
   paymentId: string;
-  sender: string;
-  recipient: string;
-  amount: bigint;
-  token: string;
-  timestamp: number;
   status: PaymentStatus;
+  sender: Address;
+  recipient?: Address;
+  recipients?: { address: Address; amount: bigint }[];
+  amount: bigint;
+  token: Address;
   metadata?: string;
-  txHash?: string;
+  transactionHash?: string;
   error?: string;
+  timestamp: number;
 }
 
 export function generateReceipt(paymentId: string): Receipt {
   const payment = paymentTracker.getPayment(paymentId);
   if (!payment) {
-    throw new Error('Payment not found');
+    throw new Error(`Payment not found: ${paymentId}`);
   }
 
+  const status = paymentTracker.getPaymentStatus(paymentId);
+  const transactionHash = paymentTracker.getTransactionHash(paymentId);
+  const error = paymentTracker.getError(paymentId);
+
   return {
-    id: Math.random().toString(36).substring(7),
     paymentId,
+    status,
     sender: payment.sender,
     recipient: payment.recipient,
+    recipients: payment.recipients,
     amount: payment.amount,
     token: payment.token,
-    timestamp: payment.timestamp,
-    status: payment.status,
     metadata: payment.metadata,
-    txHash: payment.txHash,
-    error: payment.error,
+    transactionHash,
+    error,
+    timestamp: Date.now(),
   };
 }
 
+// Deprecated - use generateReceipt function instead
 export class ReceiptGenerator {
   static generateReceipt(paymentId: string): Receipt {
     const payment = paymentTracker.getPayment(paymentId);
@@ -43,18 +49,18 @@ export class ReceiptGenerator {
       throw new Error(`Payment with ID ${paymentId} not found`);
     }
 
-    const receiptId = `RCPT-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-
     return {
-      id: receiptId,
       paymentId,
       sender: payment.sender,
-      recipient: payment.recipient || '',
+      recipient: payment.recipient,
+      recipients: payment.recipients,
       amount: payment.amount,
       token: payment.token,
-      timestamp: payment.timestamp,
-      status: 'completed',
+      status: PaymentStatus.Completed,
       metadata: payment.metadata,
+      transactionHash: payment.transactionHash,
+      error: payment.error,
+      timestamp: Date.now(),
     };
   }
 

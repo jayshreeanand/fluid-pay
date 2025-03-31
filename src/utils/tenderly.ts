@@ -11,6 +11,7 @@ import { eligibleChains, DEFAULT_TENDERLY_CONFIG } from './constants.js';
 import { logger } from './logger.js';
 import dotenv from 'dotenv';
 import { appendIdToFile } from './helpers.js';
+import { type Address } from 'viem';
 
 dotenv.config();
 
@@ -159,5 +160,100 @@ export function generateVirtualConfig(virtualChain: VirtualTestnetParams) {
       },
     },
     testnet: virtualChain.testnet,
+  };
+}
+
+export async function setupVirtualClient(
+  chainId: number,
+  tenderlyConfig: TenderlyConfig,
+  isDestination: boolean
+): Promise<{
+  walletClient: any;
+  chain: VirtualTestnetParams;
+  address: Address;
+  publicClient: any;
+  privateKey: string;
+}> {
+  const { TENDERLY_ACCESS_KEY, TENDERLY_ACCOUNT, TENDERLY_PROJECT } = tenderlyConfig;
+
+  const response = await fetch(
+    `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/fork`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Access-Key': TENDERLY_ACCESS_KEY,
+      },
+      body: JSON.stringify({
+        network_id: chainId.toString(),
+        block_number: 'latest',
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to create Tenderly fork');
+  }
+
+  const data = await response.json();
+
+  const rpcUrl = data.rpcs.find((rpc: RPC) => rpc.name === 'Admin RPC')?.url;
+  const blockExplorerUrl = data.rpcs.find((rpc: RPC) => rpc.name === 'Public RPC')?.url;
+
+  if (!rpcUrl) {
+    throw new Error('Failed to get RPC URL from Tenderly fork');
+  }
+
+  const virtualTestnet: VirtualTestnetParams = {
+    id: data.id,
+    chainId,
+    rpcUrl,
+    blockExplorerUrl,
+    project: TENDERLY_PROJECT,
+    tenderlyName: isDestination ? 'destination' : 'origin',
+    testnet: true,
+  };
+
+  // Generate a random private key for the virtual client
+  const privateKey = `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`;
+
+  // This is a mock implementation for simulation purposes
+  const walletClient = {
+    getQuote: async (params: any) => ({
+      deposit: {
+        spokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
+        destinationSpokePoolAddress: '0x1234567890123456789012345678901234567890' as Address,
+      },
+      sourceTxHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`,
+      destinationTxHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`,
+      sourceChainId: params.originChainId,
+      destinationChainId: params.destinationChainId,
+      inputToken: params.inputToken,
+      outputToken: params.outputToken,
+      inputAmount: params.inputAmount,
+      outputAmount: params.inputAmount, // Same in simulation
+      timestamp: Date.now(),
+    }),
+    executeAcrossTxs: async (quote: any) => ({
+      transactionHash: quote.sourceTxHash,
+      status: 'success',
+      blockNumber: 123456,
+      blockHash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}`,
+    }),
+    account: {
+      address: '0x0000000000000000000000000000000000000000' as Address,
+    }
+  };
+
+  const publicClient = {
+    // Public client methods
+  };
+
+  return {
+    walletClient,
+    chain: virtualTestnet,
+    address: '0x0000000000000000000000000000000000000000' as Address,
+    publicClient,
+    privateKey,
   };
 }

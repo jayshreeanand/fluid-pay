@@ -4,6 +4,7 @@ import { type ConfiguredWalletClient } from '@across-protocol/app-sdk';
 export interface RPC {
   url: string;
   chainId: number;
+  name?: string;
 }
 
 export interface RpcUrls {
@@ -43,13 +44,15 @@ export type CreateMessageFn = (
 ) => Promise<CrossChainMessage | undefined>;
 
 export interface CrossChainMessage {
-  sourceChainId: number;
-  destinationChainId: number;
-  inputToken: Address;
-  outputToken: Address;
-  amount: bigint;
-  recipient: Address;
-  metadata?: string;
+  actions: CrossChainAction[];
+  fallbackRecipient: Address;
+}
+
+export interface CrossChainAction {
+  target: Address;
+  callData: Hex;
+  value: bigint;
+  update?: (outputAmount: bigint) => CrossChainAction;
 }
 
 export interface SetupResult {

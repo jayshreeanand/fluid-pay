@@ -1,85 +1,112 @@
 import { type Address } from 'viem';
-import { PaymentStatus, PaymentType } from './config.js';
-import type { PaymentConfig } from './config.js';
+import { PaymentStatus, type PaymentConfig } from './config.js';
 import { ReceiptGenerator } from './receipt.js';
 import type { Receipt } from './receipt.js';
 import { generateReceipt } from './receipt.js';
 
 interface Payment {
   id: string;
-  config: PaymentConfig;
-  status: PaymentStatus;
-  timestamp: number;
-  txHash?: string;
-  error?: string;
-  sender: string;
-  recipient: string;
+  type: string;
+  sender: Address;
+  recipient?: Address;
+  recipients?: { address: Address; amount: bigint }[];
+  token: Address;
   amount: bigint;
-  token: string;
   metadata?: string;
+  status: PaymentStatus;
+  transactionHash?: string;
+  error?: string;
+  timestamp: number;
 }
 
 export class PaymentTracker {
   private payments: Map<string, Payment> = new Map();
-  private addressPayments: Map<string, Set<string>> = new Map();
+  private paymentsByAddress: Map<Address, Set<string>> = new Map();
 
-  createPayment(paymentConfig: PaymentConfig): string {
-    const id = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  public createPayment(paymentConfig: PaymentConfig): string {
+    const paymentId = Math.random().toString(36).substring(7);
     const payment: Payment = {
-      id,
-      config: paymentConfig,
+      id: paymentId,
+      type: paymentConfig.type,
+      sender: paymentConfig.sender,
+      recipient: paymentConfig.recipient,
+      recipients: paymentConfig.recipients,
+      token: paymentConfig.token,
+      amount: paymentConfig.amount,
+      metadata: paymentConfig.metadata,
       status: PaymentStatus.Pending,
       timestamp: Date.now(),
-      sender: paymentConfig.sender,
-      recipient: paymentConfig.recipient || '',
-      amount: paymentConfig.amount,
-      token: paymentConfig.token,
-      metadata: paymentConfig.metadata,
     };
 
-    this.payments.set(id, payment);
+    this.payments.set(paymentId, payment);
 
-    // Track payments by address
-    if (!this.addressPayments.has(paymentConfig.sender)) {
-      this.addressPayments.set(paymentConfig.sender, new Set());
+    // Track payment by sender address
+    if (!this.paymentsByAddress.has(paymentConfig.sender)) {
+      this.paymentsByAddress.set(paymentConfig.sender, new Set());
     }
-    this.addressPayments.get(paymentConfig.sender)?.add(id);
+    this.paymentsByAddress.get(paymentConfig.sender)?.add(paymentId);
 
-    return id;
+    // Track payment by recipient address if it's a single recipient payment
+    if (paymentConfig.recipient) {
+      if (!this.paymentsByAddress.has(paymentConfig.recipient)) {
+        this.paymentsByAddress.set(paymentConfig.recipient, new Set());
+      }
+      this.paymentsByAddress.get(paymentConfig.recipient)?.add(paymentId);
+    }
+
+    // Track payments by recipients if it's a batch payment
+    if (paymentConfig.recipients) {
+      for (const recipient of paymentConfig.recipients) {
+        if (!this.paymentsByAddress.has(recipient.address)) {
+          this.paymentsByAddress.set(recipient.address, new Set());
+        }
+        this.paymentsByAddress.get(recipient.address)?.add(paymentId);
+      }
+    }
+
+    return paymentId;
   }
 
-  getPayment(paymentId: string): Payment | undefined {
+  public getPayment(paymentId: string): Payment | undefined {
     return this.payments.get(paymentId);
   }
 
-  getPaymentHistory(): Payment[] {
-    return Array.from(this.payments.values());
+  public getPaymentStatus(paymentId: string): PaymentStatus {
+    const payment = this.payments.get(paymentId);
+    return payment?.status || PaymentStatus.Failed;
   }
 
-  updatePaymentStatus(paymentId: string, status: PaymentStatus, txHash?: string, error?: string): void {
+  public getTransactionHash(paymentId: string): string | undefined {
+    const payment = this.payments.get(paymentId);
+    return payment?.transactionHash;
+  }
+
+  public getError(paymentId: string): string | undefined {
+    const payment = this.payments.get(paymentId);
+    return payment?.error;
+  }
+
+  public updatePaymentStatus(
+    paymentId: string,
+    status: PaymentStatus,
+    transactionHash?: string,
+    error?: string
+  ): void {
     const payment = this.payments.get(paymentId);
     if (payment) {
       payment.status = status;
-      if (txHash) {
-        payment.txHash = txHash;
+      if (transactionHash) {
+        payment.transactionHash = transactionHash;
       }
       if (error) {
         payment.error = error;
       }
+      this.payments.set(paymentId, payment);
     }
   }
 
-  getPaymentStatus(paymentId: string): PaymentStatus {
-    return this.payments.get(paymentId)?.status ?? PaymentStatus.Failed;
-  }
-
-  getPaymentsByAddress(address: Address): Payment[] {
-    const paymentIds = this.addressPayments.get(address.toString());
-    if (!paymentIds) return [];
-
-    return Array.from(paymentIds)
-      .map((id) => this.payments.get(id))
-      .filter((payment): payment is Payment => payment !== undefined);
+  public getPaymentHistory(): Payment[] {
+    return Array.from(this.payments.values());
   }
 }
 

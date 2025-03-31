@@ -66,6 +66,8 @@ export interface PaymentConfig {
   destinationChainId: number;
   inputToken: Address;
   outputToken: Address;
+  frequency?: number; // For recurring payments
+  endTime?: number; // For recurring payments and streams
 }
 
 // Helper function to validate payment config
@@ -81,6 +83,21 @@ export function validatePaymentConfig(paymentConfig: PaymentConfig): void {
   } else {
     if (!paymentConfig.recipient) {
       throw new Error('Recipient is required for non-batch payments');
+    }
+  }
+
+  if (paymentConfig.type === PaymentType.Recurring) {
+    if (!paymentConfig.frequency) {
+      throw new Error('Frequency is required for recurring payments');
+    }
+    if (!paymentConfig.endTime) {
+      throw new Error('End time is required for recurring payments');
+    }
+  }
+
+  if (paymentConfig.type === PaymentType.Stream) {
+    if (!paymentConfig.endTime) {
+      throw new Error('End time is required for streams');
     }
   }
 }

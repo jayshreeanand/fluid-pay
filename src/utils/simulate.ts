@@ -38,6 +38,7 @@ import {
   createTransactionUrl,
   logTransactionSuccess,
 } from '../utils/helpers.js';
+import type { ExecuteAcrossTxsResult } from '../payments/types.js';
 
 dotenv.config();
 
@@ -51,139 +52,79 @@ const undefinedChain = {
 
 export async function simulateAcrossTransaction(
   config: Config,
-  userWalletClient: ConfiguredWalletClient,
-  virtualOriginChain: VirtualTestnetParams,
+  walletClient: any,
+  chain: any,
   crossChainMessage: CrossChainMessage,
-  tenderlyConfig: TenderlyConfig
-): Promise<{ destinationTxSuccess: boolean; quote: Quote } | undefined> {
-  if (!userWalletClient) {
-    logger.error('Unable to generate wallet client for user');
-    return undefined;
+  tenderlyConfig: {
+    TENDERLY_ACCESS_KEY: string;
+    TENDERLY_ACCOUNT: string;
+    TENDERLY_PROJECT: string;
+  }
+): Promise<ExecuteAcrossTxsResult | undefined> {
+  const {
+    walletClient: destinationWalletClient,
+    chain: destinationChain,
+    address: destinationAddress,
+    publicClient: destinationPublicClient,
+    privateKey: destinationPrivateKey,
+  } = await setupVirtualClient(config.destinationChainId, tenderlyConfig, true);
+
+  if (
+    !destinationWalletClient ||
+    !destinationChain ||
+    !destinationAddress ||
+    !destinationPublicClient
+  ) {
+    throw new Error('Failed to setup destination virtual client');
   }
 
   try {
-    const {
-      walletClient: relayerWalletClient,
-      chain: virtualDestinationChain,
-      publicClient,
-    } = await setupVirtualClient(config.destinationChain, tenderlyConfig, true);
-
-    if (!publicClient || !relayerWalletClient || !virtualDestinationChain) {
-      logger.error('Failed to setup virtual testnet.');
-      return;
-    }
-
-    const acrossClient = await setupAcrossClient(
-      virtualOriginChain,
-      virtualDestinationChain as VirtualTestnetParams,
-      tenderlyConfig
-    );
-
-    if (!acrossClient) {
-      logger.error('Setup failed, returning early.');
-      return undefined;
-    }
-
-    const route = {
-      originChainId: config.sourceChain,
-      destinationChainId: config.destinationChain,
-      inputToken: config.inputToken as Address,
-      outputToken: config.outputToken as Address,
-    };
-
-    const quote = await acrossClient.getQuote({
-      route,
+    const quote = await walletClient.getQuote({
+      originChainId: config.sourceChainId,
+      destinationChainId: config.destinationChainId,
+      inputToken: config.inputToken,
+      outputToken: config.outputToken,
       inputAmount: config.amount,
+      recipient: destinationAddress,
       crossChainMessage: crossChainMessage,
     });
 
-    // Updating because simulation will fail if exclusive relayer is set.
-    const updatedDeposit = {
-      ...quote.deposit,
-      exclusiveRelayer: EMPTY_ADDRESS as Address, // Change exclusiveRelayer to "0x"
-      exclusivityDeadline: 0,
-    };
+    if (!quote) {
+      throw new Error('Failed to get quote');
+    }
 
-    await handleFundingAndApprovals(
-      userWalletClient,
-      relayerWalletClient,
-      updatedDeposit,
-      updatedDeposit.spokePoolAddress,
-      updatedDeposit.destinationSpokePoolAddress,
-      virtualOriginChain,
-      tenderlyConfig
+    const txReceipt = await walletClient.executeAcrossTxs(quote, {
+      privateKey: destinationPrivateKey,
+    });
+
+    if (!txReceipt) {
+      throw new Error('Failed to execute transaction');
+    }
+
+    console.log(
+      'Transaction simulated successfully:',
+      createTransactionUrl(config.sourceChainId, txReceipt.transactionHash)
     );
 
-    await acrossClient.executeQuote({
-      walletClient: userWalletClient,
-      deposit: updatedDeposit,
-      onProgress: async (progress: ExecutionProgress) => {
-        if (progress.step === 'approve' && progress.status === 'txSuccess') {
-          // if approving an ERC20, you have access to the approval receipt
-          const { txReceipt } = progress;
-          const transactionUrl = createTransactionUrl(
-            config.sourceChain,
-            txReceipt.transactionHash
-          );
-          logTransactionSuccess(
-            `- Sucessfully approved spoke pool on origin chain`,
-            transactionUrl
-          );
-        }
-
-        if (progress.step === 'deposit' && progress.status === 'txSuccess') {
-          // once deposit is successful you have access to depositId and the receipt
-          const { txReceipt } = progress;
-
-          const transactionUrl = createTransactionUrl(
-            config.sourceChain,
-            txReceipt.transactionHash
-          );
-          logTransactionSuccess(
-            `Sucessfully completed deposit on origin chain`,
-            transactionUrl
-          );
-
-          const rawDeposit = getDepositFromLogs({
-            originChainId: config.sourceChain,
-            receipt: txReceipt,
-          });
-
-          if (!rawDeposit) {
-            logger.error('Error retrieving deposit.');
-            return;
-          }
-          await spokePoolFillTx(
-            rawDeposit,
-            publicClient,
-            relayerWalletClient,
-            quote.deposit.destinationSpokePoolAddress,
-            virtualDestinationChain as VirtualTestnetParams,
-            tenderlyConfig
-          );
-        }
-
-        if (progress.step === 'fill' && progress.status === 'txSuccess') {
-          // if the fill is successful, you have access the following data
-          const { actionSuccess } = progress;
-          // actionSuccess is a boolean flag, telling us if your cross chain messages were successful
-          logger.info('Result of cross chain transaction:');
-          if (actionSuccess) {
-            logger.info(
-              '-    \u2714 Destination chain contract interactions were successful!'
-            );
-            return; // Exit the onProgress function
-          } else {
-            logger.error(
-              '-    \u2716 Destination chain contract interactions failed!'
-            );
-            return;
-          }
-        }
-      },
-    });
+    return {
+      destinationTxSuccess: true,
+      quote: {
+        sourceTxHash: txReceipt.transactionHash,
+        sourceChainId: config.sourceChainId,
+        destinationChainId: config.destinationChainId,
+        inputToken: config.inputToken,
+        outputToken: config.outputToken,
+        inputAmount: config.amount,
+        outputAmount: config.amount, // In simulation this is the same
+        timestamp: Date.now(),
+      }
+    };
   } catch (error) {
-    logger.log('error', error);
+    console.error(
+      'Transaction simulation failed:',
+      error instanceof Error ? error.message : error
+    );
+    throw error;
   }
 }
 

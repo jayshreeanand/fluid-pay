@@ -1,7 +1,7 @@
 import { type Address, encodeFunctionData, parseAbi } from 'viem';
 import { config } from './config.js';
-import type { CrossChainMessage } from '../types/index.js';
-import { PaymentStatus, PaymentType, type PaymentConfig } from './config.js';
+import type { CrossChainMessage, CrossChainAction } from '../types/index.js';
+import { PaymentType, type PaymentConfig } from './config.js';
 
 // ABI for the payment hub functions
 const PAYMENT_HUB_ABI = [
@@ -32,14 +32,38 @@ function encodeMetadata(metadata: string): `0x${string}` {
 }
 
 export function createCrossChainMessage(paymentConfig: PaymentConfig): CrossChainMessage {
+  if (!paymentConfig.token) {
+    throw new Error('Token is required');
+  }
+
+  const approveAction: CrossChainAction = {
+    target: paymentConfig.token,
+    callData: generateApproveCallData(config.contractAddress, paymentConfig.amount),
+    value: 0n,
+    update: (outputAmount: bigint) => ({
+      target: paymentConfig.token,
+      callData: generateApproveCallData(config.contractAddress, outputAmount),
+      value: 0n,
+    }),
+  };
+
+  const paymentAction: CrossChainAction = {
+    target: config.contractAddress,
+    callData: generatePaymentCallData(paymentConfig),
+    value: 0n,
+    update: (outputAmount: bigint) => ({
+      target: config.contractAddress,
+      callData: generatePaymentCallData({
+        ...paymentConfig,
+        amount: outputAmount,
+      }),
+      value: 0n,
+    }),
+  };
+
   return {
-    sourceChainId: paymentConfig.sourceChainId,
-    destinationChainId: paymentConfig.destinationChainId,
-    inputToken: paymentConfig.inputToken,
-    outputToken: paymentConfig.outputToken,
-    amount: paymentConfig.amount,
-    recipient: paymentConfig.recipient || '',
-    metadata: paymentConfig.metadata,
+    actions: [approveAction, paymentAction],
+    fallbackRecipient: paymentConfig.sender,
   };
 }
 

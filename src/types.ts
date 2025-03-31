@@ -1,5 +1,5 @@
 import { type Address } from 'viem';
-import type { Config } from '../../types/index.js';
+import type { Config } from './types/index.js';
 
 export interface ExecuteAcrossTxsResult {
   destinationTxSuccess: boolean;
