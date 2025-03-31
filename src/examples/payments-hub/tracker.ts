@@ -1,104 +1,78 @@
 import { type Address } from 'viem';
-import { PaymentStatus, type PaymentConfig } from './config.js';
+import { PaymentStatus, PaymentType } from './config.js';
+import type { PaymentConfig } from './config.js';
 import { ReceiptGenerator } from './receipt.js';
 import type { Receipt } from './receipt.js';
 
-interface PaymentRecord {
+interface Payment {
   id: string;
-  timestamp: number;
-  status: PaymentStatus;
   config: PaymentConfig;
+  status: PaymentStatus;
   txHash?: string;
   error?: string;
+  timestamp: number;
 }
 
 class PaymentTracker {
-  private payments: Map<string, PaymentRecord>;
+  private payments: Map<string, Payment> = new Map();
+  private addressPayments: Map<Address, Set<string>> = new Map();
 
-  constructor() {
-    this.payments = new Map();
-  }
-
-  // Create a new payment record
-  public createPayment(config: PaymentConfig): string {
-    const id = this.generatePaymentId();
-    const record: PaymentRecord = {
+  createPayment(config: PaymentConfig): string {
+    const id = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const payment: Payment = {
       id,
-      timestamp: Date.now(),
-      status: PaymentStatus.Pending,
       config,
+      status: PaymentStatus.Pending,
+      timestamp: Date.now(),
     };
-    this.payments.set(id, record);
+
+    this.payments.set(id, payment);
+
+    // Track payments by address
+    if (!this.addressPayments.has(config.sender)) {
+      this.addressPayments.set(config.sender, new Set());
+    }
+    this.addressPayments.get(config.sender)?.add(id);
+
     return id;
   }
 
-  // Update payment status
-  public updatePaymentStatus(
-    id: string,
+  updatePaymentStatus(
+    paymentId: string,
     status: PaymentStatus,
     txHash?: string,
     error?: string
   ): void {
-    const payment = this.payments.get(id);
-    if (!payment) {
-      throw new Error(`Payment with ID ${id} not found`);
+    const payment = this.payments.get(paymentId);
+    if (payment) {
+      payment.status = status;
+      payment.txHash = txHash;
+      payment.error = error;
+      this.payments.set(paymentId, payment);
     }
-
-    this.payments.set(id, {
-      ...payment,
-      status,
-      ...(txHash && { txHash }),
-      ...(error && { error }),
-    });
   }
 
-  // Get payment status
-  public getPaymentStatus(id: string): PaymentStatus {
-    const payment = this.payments.get(id);
-    if (!payment) {
-      throw new Error(`Payment with ID ${id} not found`);
-    }
-    return payment.status;
+  getPaymentStatus(paymentId: string): PaymentStatus {
+    return this.payments.get(paymentId)?.status ?? PaymentStatus.Failed;
   }
 
-  // Get payment details
-  public getPaymentDetails(id: string): PaymentRecord {
-    const payment = this.payments.get(id);
-    if (!payment) {
-      throw new Error(`Payment with ID ${id} not found`);
-    }
-    return payment;
+  getPayment(paymentId: string): Payment | undefined {
+    return this.payments.get(paymentId);
   }
 
-  // Get payment history for an address (as sender or recipient)
-  public getPaymentHistory(address: Address): Receipt[] {
-    const relevantPayments = Array.from(this.payments.values()).filter((payment) => {
-      const isRecipient =
-        'recipient' in payment.config &&
-        payment.config.recipient === address;
-      const isInRecipients =
-        'recipients' in payment.config &&
-        payment.config.recipients?.some((r) => r.address === address);
-      return isRecipient || isInRecipients;
-    });
+  getPaymentsByAddress(address: Address): Payment[] {
+    const paymentIds = this.addressPayments.get(address);
+    if (!paymentIds) return [];
 
-    return relevantPayments.map((payment) => 
-      ReceiptGenerator.generateReceipt(payment.id)
-    );
+    return Array.from(paymentIds)
+      .map((id) => this.payments.get(id))
+      .filter((payment): payment is Payment => payment !== undefined);
   }
 
-  // Get all payments
-  public getAllPayments(): Receipt[] {
-    return Array.from(this.payments.values()).map((payment) =>
-      ReceiptGenerator.generateReceipt(payment.id)
-    );
-  }
-
-  // Helper method to generate unique payment ID
-  private generatePaymentId(): string {
-    return `PMT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  getPaymentHistory(address: Address): Receipt[] {
+    const payments = this.getPaymentsByAddress(address);
+    return payments.map((payment) => ReceiptGenerator.generateReceipt(payment.id));
   }
 }
 
-// Export singleton instance
 export const paymentTracker = new PaymentTracker(); 

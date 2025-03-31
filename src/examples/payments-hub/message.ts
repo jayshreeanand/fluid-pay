@@ -44,8 +44,13 @@ export async function createCrossChainMessage(
     metadata: 'Default one-time payment',
   };
 
-  if (!payment.token || !payment.recipient) {
-    throw new Error('Token and recipient are required');
+  if (!payment.token) {
+    throw new Error('Token is required');
+  }
+
+  // For batch payments, we don't need a single recipient
+  if (payment.type !== PaymentType.Batch && !payment.recipient) {
+    throw new Error('Recipient is required for non-batch payments');
   }
 
   return {
@@ -84,12 +89,15 @@ export async function createCrossChainMessage(
 
 // Helper function to generate payment call data based on payment type
 function generatePaymentCallData(payment: PaymentConfig): `0x${string}` {
-  if (!payment.token || !payment.recipient) {
-    throw new Error('Token and recipient are required');
+  if (!payment.token) {
+    throw new Error('Token is required');
   }
 
   switch (payment.type) {
     case PaymentType.OneTime:
+      if (!payment.recipient) {
+        throw new Error('Recipient is required for one-time payments');
+      }
       return encodeFunctionData({
         abi: [parseAbiItem(PAYMENT_HUB_ABI[0])],
         args: [
@@ -101,6 +109,9 @@ function generatePaymentCallData(payment: PaymentConfig): `0x${string}` {
       });
 
     case PaymentType.Recurring:
+      if (!payment.recipient) {
+        throw new Error('Recipient is required for recurring payments');
+      }
       if (!payment.frequency || !payment.endTime) {
         throw new Error(
           'Frequency and endTime required for recurring payments'
@@ -119,8 +130,8 @@ function generatePaymentCallData(payment: PaymentConfig): `0x${string}` {
       });
 
     case PaymentType.Batch:
-      if (!payment.recipients) {
-        throw new Error('Recipients array required for batch payments');
+      if (!payment.recipients || payment.recipients.length === 0) {
+        throw new Error('At least one recipient is required for batch payments');
       }
       return encodeFunctionData({
         abi: [parseAbiItem(PAYMENT_HUB_ABI[2])],
@@ -133,6 +144,9 @@ function generatePaymentCallData(payment: PaymentConfig): `0x${string}` {
       });
 
     case PaymentType.Stream:
+      if (!payment.recipient) {
+        throw new Error('Recipient is required for payment streaming');
+      }
       if (!payment.endTime) {
         throw new Error('EndTime required for payment streaming');
       }

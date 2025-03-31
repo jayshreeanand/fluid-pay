@@ -69,7 +69,9 @@ export enum PaymentStatus {
 export interface PaymentConfig {
   type: PaymentType;
   sender: Address;
+  // For non-batch payments, recipient is required
   recipient?: Address;
+  // For batch payments, recipients array is required
   recipients?: { address: Address; amount: bigint }[];
   amount: bigint;
   token: Address;
@@ -77,4 +79,26 @@ export interface PaymentConfig {
   // Optional fields for specific payment types
   frequency?: number; // For recurring payments (in seconds)
   endTime?: number; // For recurring payments and streams (Unix timestamp)
+}
+
+// Helper function to validate payment config
+export function validatePaymentConfig(config: PaymentConfig): void {
+  if (!config.token) {
+    throw new Error('Token is required');
+  }
+
+  switch (config.type) {
+    case PaymentType.Batch:
+      if (!config.recipients || config.recipients.length === 0) {
+        throw new Error('At least one recipient is required for batch payments');
+      }
+      break;
+    case PaymentType.OneTime:
+    case PaymentType.Recurring:
+    case PaymentType.Stream:
+      if (!config.recipient) {
+        throw new Error('Recipient is required for non-batch payments');
+      }
+      break;
+  }
 } 
