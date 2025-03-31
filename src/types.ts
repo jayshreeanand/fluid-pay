@@ -31,4 +31,6 @@ export interface PaymentHubConfig extends Config {
   paymentHubContracts: Record<number, Address>;
   defaultGasLimit: bigint;
   defaultGasPrice: bigint;
-} 
+}
+
+export * from './types/index.js'; 

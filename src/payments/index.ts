@@ -1,5 +1,5 @@
-import { executeAcrossTxs } from '../../utils/executeAcrossTxs.js';
 import { type Address } from 'viem';
+import { executeAcrossTxs } from '../utils/executeAcrossTxs.js';
 import { config } from './config.js';
 import { createCrossChainMessage } from './message.js';
 import { paymentTracker } from './tracker.js';
@@ -7,8 +7,11 @@ import { ReceiptGenerator } from './receipt.js';
 import type { PaymentConfig } from './config.js';
 import { PaymentStatus, PaymentType, validatePaymentConfig } from './config.js';
 import type { Receipt } from './receipt.js';
-import type { TenderlyConfig } from '../../types/index.js';
+import type { TenderlyConfig } from '../types/index.js';
 import type { ExecuteAcrossTxsResult } from './types.js';
+import { type Config } from '../types/index.js';
+import { PaymentTracker } from './tracker.js';
+import { generateReceipt } from './receipt.js';
 
 export interface PaymentHubInterface {
   sendOneTimePayment(
@@ -147,10 +150,7 @@ export class PaymentHub implements PaymentHubInterface {
     const paymentId = paymentTracker.createPayment(paymentConfig);
 
     try {
-      const message = await createCrossChainMessage(
-        paymentConfig.sender,
-        paymentConfig
-      );
+      const message = createCrossChainMessage(paymentConfig);
 
       const result = (await executeAcrossTxs(
         config,

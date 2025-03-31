@@ -1,4 +1,4 @@
-import { PaymentHub } from './index.js';
+import { PaymentHub } from './payments/index.js';
 import { config } from './config.js';
 import { type Address } from 'viem';
 

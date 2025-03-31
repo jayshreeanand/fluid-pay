@@ -1,5 +1,5 @@
 import { parseUnits, type Address } from 'viem';
-import type { Config } from '../../types/index.js';
+import type { Config } from '../types/index.js';
 
 // Supported payment tokens on each chain
 export const PAYMENT_TOKENS = {
@@ -37,68 +37,65 @@ export const PAYMENT_HUB_CONTRACTS = {
   10: '0x1234567890123456789012345678901234567890' as Address, // Optimism
 } as const;
 
-// Default configuration for the example
-export const config: Config = {
-  // We'll use Base as source chain and Arbitrum as destination for this example
-  contractAddress: PAYMENT_HUB_CONTRACTS[42161], // Arbitrum payment hub
-  sourceChain: 8453, // Base
-  destinationChain: 42161, // Arbitrum
-  inputToken: PAYMENT_TOKENS[8453].USDC as `0x${string}`, // USDC on Base
-  outputToken: PAYMENT_TOKENS[42161].USDC as `0x${string}`, // USDC on Arbitrum
-  amount: parseUnits('100', 6), // 100 USDC
-  fallbackRecipient: '', // Will be set in the message.ts
-};
-
 // Payment types supported by the hub
 export enum PaymentType {
-  OneTime = 0,
-  Recurring = 1,
-  Batch = 2,
-  Stream = 3,
+  OneTime = 'OneTime',
+  Recurring = 'Recurring',
+  Batch = 'Batch',
+  Stream = 'Stream',
 }
 
 // Payment status tracking
 export enum PaymentStatus {
-  Pending = 0,
-  Processing = 1,
-  Completed = 2,
-  Failed = 3,
+  Pending = 'Pending',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  Cancelled = 'Cancelled',
 }
 
 // Configuration for different payment types
 export interface PaymentConfig {
   type: PaymentType;
   sender: Address;
-  // For non-batch payments, recipient is required
   recipient?: Address;
-  // For batch payments, recipients array is required
   recipients?: { address: Address; amount: bigint }[];
-  amount: bigint;
   token: Address;
+  amount: bigint;
   metadata?: string;
-  // Optional fields for specific payment types
-  frequency?: number; // For recurring payments (in seconds)
-  endTime?: number; // For recurring payments and streams (Unix timestamp)
+  sourceChainId: number;
+  destinationChainId: number;
+  inputToken: Address;
+  outputToken: Address;
 }
 
 // Helper function to validate payment config
-export function validatePaymentConfig(config: PaymentConfig): void {
-  if (!config.token) {
+export function validatePaymentConfig(paymentConfig: PaymentConfig): void {
+  if (!paymentConfig.token) {
     throw new Error('Token is required');
   }
 
-  switch (config.type) {
-    case PaymentType.Batch:
-      if (!config.recipients || config.recipients.length === 0) {
-        throw new Error('At least one recipient is required for batch payments');
-      }
-      break;
-    case PaymentType.OneTime:
-    case PaymentType.Recurring:
-    case PaymentType.Stream:
-      if (!config.recipient) {
-        throw new Error('Recipient is required for non-batch payments');
-      }
-      break;
+  if (paymentConfig.type === PaymentType.Batch) {
+    if (!paymentConfig.recipients || paymentConfig.recipients.length === 0) {
+      throw new Error('At least one recipient is required for batch payments');
+    }
+  } else {
+    if (!paymentConfig.recipient) {
+      throw new Error('Recipient is required for non-batch payments');
+    }
   }
-} 
+}
+
+// Default configuration for the payment hub
+export const config: Config = {
+  sourceChainId: 8453,
+  destinationChainId: 42161,
+  inputToken: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  outputToken: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
+  amount: BigInt(1000000),
+  contractAddress: '0x1234567890123456789012345678901234567890',
+  tenderly: {
+    TENDERLY_ACCESS_KEY: '',
+    TENDERLY_ACCOUNT: '',
+    TENDERLY_PROJECT: '',
+  },
+}; 

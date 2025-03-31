@@ -1,12 +1,9 @@
-import type { Hex, Address, PublicClient, Chain } from 'viem';
-import type {
-  CrossChainAction,
-  ConfiguredWalletClient,
-} from '@across-protocol/app-sdk';
+import { type Address, type Hex, type PublicClient, type Chain } from 'viem';
+import { type ConfiguredWalletClient } from '@across-protocol/app-sdk';
 
 export interface RPC {
   url: string;
-  name: string;
+  chainId: number;
 }
 
 export interface RpcUrls {
@@ -46,8 +43,13 @@ export type CreateMessageFn = (
 ) => Promise<CrossChainMessage | undefined>;
 
 export interface CrossChainMessage {
-  actions: CrossChainAction[];
-  fallbackRecipient: Address;
+  sourceChainId: number;
+  destinationChainId: number;
+  inputToken: Address;
+  outputToken: Address;
+  amount: bigint;
+  recipient: Address;
+  metadata?: string;
 }
 
 export interface SetupResult {
@@ -59,13 +61,17 @@ export interface SetupResult {
 }
 
 export interface Config {
-  contractAddress: Address;
-  sourceChain: number;
-  destinationChain: number;
-  inputToken: `0x${string}`;
-  outputToken: `0x${string}`;
+  sourceChainId: number;
+  destinationChainId: number;
+  inputToken: Address;
+  outputToken: Address;
   amount: bigint;
-  fallbackRecipient: string;
+  contractAddress: Address;
+  tenderly?: {
+    TENDERLY_ACCESS_KEY: string;
+    TENDERLY_ACCOUNT: string;
+    TENDERLY_PROJECT: string;
+  };
 }
 
 export interface TenderlyConfig {
@@ -78,3 +84,14 @@ export type EligibleChain = Chain & {
   testnet: boolean;
   tenderlyName: string;
 };
+
+export interface ChainConfig {
+  chainId: number;
+  rpc: RPC;
+  publicClient: PublicClient;
+  walletClient: ConfiguredWalletClient;
+}
+
+export interface ChainConfigs {
+  [chainId: number]: ChainConfig;
+}
