@@ -1,13 +1,11 @@
 # Fluid Pay - Cross-Chain Payment Application
 
-Fluid Pay is a modern web3 application that enables seamless cross-chain payments between different blockchain networks. Built with Next.js, TypeScript, and Tailwind CSS, it provides a user-friendly interface for sending payments across chains. The application leverages Espresso Decaf test and Arbitrum Sepolia rollup for enhanced transaction processing and security.
+FluidPay is a seamless cross-chain payments hub built on the Arbitrum-Decaf rollup, leveraging ERC-7683 for decentralized, intent-based transfers. It provides a streamlined user experience for conducting payments across multiple chains with rapid transaction finality using Espresso confirmations.
 
-<img width="1635" alt="fluid pay" src="https://github.com/user-attachments/assets/c2f42b96-a3fa-4f03-8caf-ffbc4a311bad" />
-
-
-## 🌟 Features
+## Features
 
 - **Cross-Chain Payments**: Send payments between different blockchain networks
+- **Crosschain Intents**: Support for different phases of crosschain intent execution
 - **Wallet Integration**: Connect with popular Web3 wallets using RainbowKit
 - **Transaction History**: Track all your cross-chain transactions
 - **Modern UI**: Clean, responsive interface with light theme
@@ -15,20 +13,57 @@ Fluid Pay is a modern web3 application that enables seamless cross-chain payment
 - **Multi-Chain Support**: Currently supports Ethereum and Polygon networks
 - **Espresso Integration**: Leverages Espresso Decaf test for enhanced transaction processing
 - **Arbitrum Rollup**: Utilizes Arbitrum Sepolia rollup for secure and efficient transaction execution
+- **Transaction Simulation**: Simulate transactions before execution
+- **Recurring Payments**: Set up automated recurring cross-chain payments
+- **Multi-Recipient Support**: Send payments to multiple recipients in a single transaction
+
+## 🔄 Crosschain Intents
+
+Crosschain Intents represent a paradigm shift in blockchain transactions, where users specify desired outcomes rather than execution paths. Fluid Pay supports multiple phases of crosschain intent evolution:
+
+### Phase 1: Simple Asset Transfer
+
+- Users specify moving the same asset from Chain A to Chain B
+- Basic cross-chain transfer functionality
+- Supported since 2021
+
+### Phase 2: Asset Transfer with Destination Execution
+
+- Users specify moving the same asset from Chain A to Chain B
+- Includes embedded instructions for execution on the destination chain
+- Enables complex post-transfer operations
+
+### Phase 3: Cross-Chain Swaps with Execution
+
+- Users specify swapping asset X on Chain A for a minimum amount of asset Y on Chain B
+- Includes embedded instructions for execution on the destination chain
+- Supports complex cross-chain trading scenarios
 
 ## 🏗️ Project Architecture
 
 ```
 frontend/
 ├── app/
+│   ├── components/
+│   │   ├── simulation/
+│   │   │   ├── TransactionSimulator.tsx    # Transaction simulation interface
+│   │   │   └── types.ts                    # Type definitions for simulation
+│   │   ├── payment/
+│   │   │   ├── PaymentForm.tsx             # Payment form component
+│   │   │   └── PaymentHistory.tsx          # Transaction history display
+│   │   └── common/
+│   │       ├── Button.tsx                  # Reusable button component
+│   │       └── Input.tsx                   # Reusable input component
 │   ├── hooks/
-│   │   └── useCrossChainPayment.ts    # Custom hook for payment logic
-│   ├── globals.css                     # Global styles and Tailwind config
-│   ├── layout.tsx                      # Root layout component
-│   ├── page.tsx                        # Main application page
-│   └── providers.tsx                   # Web3 providers setup
-├── public/                            # Static assets
-└── package.json                       # Project dependencies
+│   │   ├── useCrossChainPayment.ts         # Custom hook for payment logic
+│   │   ├── useTenderlySimulation.ts        # Transaction simulation hook
+│   │   └── useTransactionHistory.ts        # Transaction history management
+│   ├── globals.css                         # Global styles and Tailwind config
+│   ├── layout.tsx                          # Root layout component
+│   ├── page.tsx                            # Main application page
+│   └── providers.tsx                       # Web3 providers setup
+├── public/                                # Static assets
+└── package.json                           # Project dependencies
 ```
 
 ### Key Components
@@ -40,6 +75,7 @@ frontend/
    - Custom hooks for payment logic
    - Espresso Decaf test integration
    - Arbitrum Sepolia rollup support
+   - Tenderly API for transaction simulation
 
 2. **UI Components**
 
@@ -47,11 +83,42 @@ frontend/
    - Modern light theme with subtle animations
    - Form validation and error handling
    - Transaction history display
+   - Simulation interface
+   - Payment form with multi-recipient support
 
 3. **State Management**
    - React hooks for local state
    - Web3 state management through Wagmi
    - Transaction history tracking
+   - Simulation state management
+
+## 🛠️ Tech Stack
+
+- **Frontend Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Web3 Integration**:
+  - Wagmi
+  - RainbowKit
+  - Ethers.js
+  - WalletConnect (for multi-wallet support)
+- **Blockchain Infrastructure**:
+  - Espresso Decaf Rollup (for transaction processing and finality)
+  - Arbitrum Sepolia rollup (for secure execution)
+  - Across Protocol (for crosschain intents management)
+  - Alchemy (for blockchain data and infrastructure)
+  - Tenderly API (for transaction simulation)
+- **Development Tools**:
+  - ESLint
+  - Prettier
+  - TypeScript
+  - Jest (for testing)
+- **APIs & Services**:
+  - Espresso API (for transaction processing)
+  - Across Protocol API (for intent-based transfers)
+  - Alchemy API (for blockchain data access)
+  - Tenderly API (for transaction simulation)
+  - WalletConnect API (for wallet connections)
 
 ## 🚀 Getting Started
 
@@ -62,6 +129,7 @@ frontend/
 - Web3 wallet (MetaMask, Rainbow, etc.)
 - Access to Espresso Decaf test environment
 - Arbitrum Sepolia rollup configuration
+- Tenderly API key
 
 ### Installation
 
@@ -86,6 +154,9 @@ frontend/
    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
    NEXT_PUBLIC_ARBITRUM_ROLLUP_ID=your_rollup_id
    NEXT_PUBLIC_ESPRESSO_API_KEY=your_espresso_api_key
+   NEXT_PUBLIC_TENDERLY_ACCOUNT=your_tenderly_account
+   NEXT_PUBLIC_TENDERLY_PROJECT=your_tenderly_project
+   NEXT_PUBLIC_TENDERLY_ACCESS_KEY=your_tenderly_access_key
    ```
 
 4. Start the development server:
@@ -96,89 +167,107 @@ frontend/
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## 🛠️ Tech Stack
-
-- **Frontend Framework**: Next.js 14
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Web3 Integration**:
-  - Wagmi
-  - RainbowKit
-  - Viem
-- **UI Components**: Custom components with Tailwind
-- **State Management**: React Hooks
-- **Infrastructure**:
-  - Espresso Decaf test
-  - Arbitrum Sepolia rollup
-
-## 🔧 Configuration
-
-### WalletConnect Setup
-
-1. Create a project at [WalletConnect Cloud](https://cloud.walletconnect.com/)
-2. Get your project ID
-3. Add it to your `.env.local` file
-
-### Espresso Decaf Setup
-
-1. Get access to Espresso Decaf test environment
-2. Obtain your API key
-3. Configure the environment variables
-
-### Arbitrum Rollup Setup
-
-1. Deploy your rollup on Arbitrum Sepolia
-2. Configure the rollup ID in environment variables
-3. Set up the necessary endpoints
-
-### Chain Configuration
-
-Currently supported chains:
-
-- Ethereum Mainnet
-- Polygon Mainnet
-- Arbitrum Sepolia (via rollup)
-
-To add more chains, update the `chains` array in `providers.tsx`
-
-## 📝 Usage
-
-1. Connect your wallet using the "Connect Wallet" button
-2. Enter the payment amount
-3. Select the destination chain
-4. Enter the recipient address
-5. Click "Send Payment"
-6. Confirm the transaction in your wallet
-7. View transaction status in the history section
-8. Monitor transaction progress through Espresso and Arbitrum networks
-
-## 🧪 Testing
-
-```bash
-# Run linter
-npm run lint
-
-# Run type checking
-npm run type-check
-
-# Test Espresso integration
-npm run test:espresso
-
-# Test Arbitrum rollup
-npm run test:rollup
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📊 System Flow
+
+```mermaid
+flowchart TD
+    A[User] --> B[Connect Wallet]
+    B --> C[Select Payment Type]
+    C --> D{Payment Type}
+
+    D -->|Single Payment| E[Enter Payment Details]
+    D -->|Recurring Payment| F[Set Recurring Schedule]
+    D -->|Multi-Recipient| G[Add Multiple Recipients]
+
+    E --> H[Simulate Transaction]
+    F --> H
+    G --> H
+
+    H --> I{Simulation Result}
+    I -->|Success| J[Confirm Transaction]
+    I -->|Failure| K[Adjust Parameters]
+    K --> H
+
+    J --> L[Create Crosschain Intent]
+    L --> M[Across Protocol]
+    M --> N[Espresso Decaf Rollup]
+
+    N --> O[Transaction Processing]
+    O --> P[Arbitrum Rollup]
+    P --> Q[Final Settlement]
+
+    Q --> R[Update Transaction History]
+    R --> S[Notify User]
+
+    subgraph "Blockchain Infrastructure"
+        M
+        N
+        P
+        Q
+    end
+
+    subgraph "User Interface"
+        A
+        B
+        C
+        D
+        E
+        F
+        G
+        H
+        I
+        J
+        K
+        R
+        S
+    end
+
+    subgraph "Transaction Flow"
+        L
+        O
+    end
+```
+
+### Flow Explanation
+
+1. **User Interaction Flow**
+
+   - User connects wallet using WalletConnect
+   - Selects payment type (single, recurring, or multi-recipient)
+   - Enters payment details based on selected type
+
+2. **Transaction Simulation**
+
+   - System simulates transaction using Tenderly API
+   - Validates transaction parameters
+   - Provides feedback on potential issues
+
+3. **Crosschain Intent Creation**
+
+   - Creates intent-based transaction using Across Protocol
+   - Specifies desired outcome rather than execution path
+   - Embeds necessary instructions for destination chain
+
+4. **Transaction Processing**
+
+   - Espresso Decaf Rollup processes transaction
+   - Provides rapid transaction finality
+   - Ensures secure execution through Arbitrum rollup
+
+5. **Settlement & Updates**
+
+   - Final settlement occurs on destination chain
+   - Transaction history is updated
+   - User receives notification of completion
+
+6. **Error Handling**
+   - Failed simulations return to parameter adjustment
+   - Transaction failures trigger appropriate error messages
+   - System maintains state for retry attempts
 
 ## 🙏 Acknowledgments
 

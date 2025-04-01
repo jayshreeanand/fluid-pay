@@ -84,6 +84,17 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
   const handleSimulate = async () => {
     setIsSimulating(true);
     try {
+      // Validate required fields
+      if (!sourceChain || !destinationChain) {
+        throw new Error('Source and destination chains are required');
+      }
+      if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+        throw new Error('Valid amount is required');
+      }
+      if (recipients.length === 0 || recipients.some(r => !r.address || !r.amount)) {
+        throw new Error('Valid recipient information is required');
+      }
+
       const config: SimulationConfig = {
         sourceChain,
         destinationChain,
@@ -93,10 +104,19 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
         ...(type === 'recurring' && { frequency }),
       };
 
+      console.log('Simulation config:', config);
       const result = await onSimulate(config);
+      console.log('Simulation result:', result);
       setSimulationResult(result);
     } catch (error) {
       console.error('Simulation failed:', error);
+      setSimulationResult({
+        status: 'failed',
+        simulationResult: {
+          gasUsed: 0,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      });
     } finally {
       setIsSimulating(false);
     }
@@ -231,23 +251,80 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
       {simulationResult && (
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-lg font-medium text-gray-900 mb-2">Simulation Result</h3>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-600">
-              Status: <span className={`font-medium ${simulationResult.status === 'completed' ? 'text-green-600' : 'text-red-600'}`}>
-                {simulationResult.status}
-              </span>
-            </p>
-            {simulationResult.simulationResult && (
-              <>
-                <p className="text-sm text-gray-600">
-                  Gas Used: {simulationResult.simulationResult.gasUsed}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Status</p>
+                <p className={`text-sm font-medium ${simulationResult.status === 'completed' ? 'text-green-600' : 'text-red-600'}`}>
+                  {simulationResult.status}
                 </p>
-                {simulationResult.simulationResult.error && (
-                  <p className="text-sm text-red-600">
-                    Error: {simulationResult.simulationResult.error}
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Gas Used</p>
+                <p className="text-sm font-medium text-gray-900">{simulationResult.simulationResult?.gasUsed}</p>
+              </div>
+            </div>
+
+            {simulationResult.simulationResult?.error && (
+              <div className="bg-red-50 p-3 rounded-md">
+                <p className="text-sm text-red-600">
+                  Error: {simulationResult.simulationResult.error}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Transaction Details</p>
+              <div className="bg-white p-3 rounded-md border border-gray-200">
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-900">
+                    <span className="text-gray-600">Type:</span> {simulationResult.type}
                   </p>
-                )}
-              </>
+                  <p className="text-sm text-gray-900">
+                    <span className="text-gray-600">Amount:</span> {simulationResult.amount} ETH
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    <span className="text-gray-600">Source Chain:</span> {simulationResult.sourceChain}
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    <span className="text-gray-600">Destination Chain:</span> {simulationResult.destinationChain}
+                  </p>
+                  {simulationResult.frequency && (
+                    <p className="text-sm text-gray-900">
+                      <span className="text-gray-600">Frequency:</span> {simulationResult.frequency}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Recipients</p>
+              <div className="bg-white p-3 rounded-md border border-gray-200">
+                <div className="space-y-2">
+                  {simulationResult.recipients.map((recipient, index) => (
+                    <div key={index} className="border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                      <p className="text-sm text-gray-900">
+                        <span className="text-gray-600">Address:</span> {recipient.address}
+                      </p>
+                      <p className="text-sm text-gray-900">
+                        <span className="text-gray-600">Amount:</span> {recipient.amount} ETH
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {simulationResult.simulationResult?.logs && simulationResult.simulationResult.logs.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Transaction Logs</p>
+                <div className="bg-white p-3 rounded-md border border-gray-200 max-h-40 overflow-y-auto">
+                  <pre className="text-xs text-gray-900">
+                    {JSON.stringify(simulationResult.simulationResult.logs, null, 2)}
+                  </pre>
+                </div>
+              </div>
             )}
           </div>
         </div>
