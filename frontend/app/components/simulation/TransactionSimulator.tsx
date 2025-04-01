@@ -37,67 +37,35 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
   };
 
   const handleQuickFill = () => {
-    console.log('Quickfill button clicked');
-    console.log('Current state:', {
-      type,
-      sourceChain,
-      destinationChain,
-      amount,
-      recipients,
-      frequency
-    });
+    // Test addresses (these are example addresses, not real ones)
+    const testAddresses = {
+      recipient1: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      recipient2: '0x742d35Cc6634C0532925a3b844Bc454e4438f44f',
+      recipient3: '0x742d35Cc6634C0532925a3b844Bc454e4438f44g',
+    };
 
-    try {
-      // Test addresses (these are example addresses, not real ones)
-      const testAddresses = {
-        recipient1: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-        recipient2: '0x742d35Cc6634C0532925a3b844Bc454e4438f44f',
-        recipient3: '0x742d35Cc6634C0532925a3b844Bc454e4438f44g',
-      };
+    // Reset simulation result
+    setSimulationResult(null);
 
-      console.log('Available chains:', chains);
-
-      // Create a new state object to batch updates
-      const newState = {
-        sourceChain: chains[0]?.id.toString() || '',
-        destinationChain: chains[1]?.id.toString() || '',
-        amount: '',
-        recipients: [] as { address: string; amount: string }[],
-        frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
-      };
-
-      // Set values based on transaction type
-      switch (type) {
-        case 'one-time':
-          newState.amount = '1.5';
-          newState.recipients = [{ address: testAddresses.recipient1, amount: '1.5' }];
-          break;
-        case 'recurring':
-          newState.amount = '0.5';
-          newState.recipients = [{ address: testAddresses.recipient1, amount: '0.5' }];
-          newState.frequency = 'weekly';
-          break;
-        case 'multi-recipient':
-          newState.amount = '3.0';
-          newState.recipients = [
-            { address: testAddresses.recipient1, amount: '1.0' },
-            { address: testAddresses.recipient2, amount: '1.0' },
-            { address: testAddresses.recipient3, amount: '1.0' },
-          ];
-          break;
-      }
-
-      // Apply all state updates
-      setSourceChain(newState.sourceChain);
-      setDestinationChain(newState.destinationChain);
-      setAmount(newState.amount);
-      setRecipients(newState.recipients);
-      setFrequency(newState.frequency);
-      setSimulationResult(null);
-
-      console.log('Quickfill completed. New state:', newState);
-    } catch (error) {
-      console.error('Error in quickfill:', error);
+    // Set values based on transaction type
+    switch (type) {
+      case 'one-time':
+        setAmount('1.5');
+        setRecipients([{ address: testAddresses.recipient1, amount: '1.5' }]);
+        break;
+      case 'recurring':
+        setAmount('0.5');
+        setRecipients([{ address: testAddresses.recipient1, amount: '0.5' }]);
+        setFrequency('weekly');
+        break;
+      case 'multi-recipient':
+        setAmount('3.0');
+        setRecipients([
+          { address: testAddresses.recipient1, amount: '1.0' },
+          { address: testAddresses.recipient2, amount: '1.0' },
+          { address: testAddresses.recipient3, amount: '1.0' },
+        ]);
+        break;
     }
   };
 
@@ -153,7 +121,7 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             >
               <option value="one-time">One-time Payment</option>
               <option value="recurring">Recurring Payment</option>
@@ -166,7 +134,7 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
             <select
               value={sourceChain}
               onChange={(e) => setSourceChain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             >
               {chains.map((chain) => (
                 <option key={chain.id} value={chain.id}>
@@ -181,7 +149,7 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
             <select
               value={destinationChain}
               onChange={(e) => setDestinationChain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             >
               {chains.map((chain) => (
                 <option key={chain.id} value={chain.id}>
@@ -197,7 +165,7 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
               <select
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -214,7 +182,7 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
               placeholder="Enter amount"
             />
           </div>
@@ -236,14 +204,14 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
                   type="text"
                   value={recipient.address}
                   onChange={(e) => handleRecipientChange(index, 'address', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                   placeholder="Recipient address"
                 />
                 <input
                   type="number"
                   value={recipient.amount}
                   onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                   placeholder="Amount"
                 />
               </div>
