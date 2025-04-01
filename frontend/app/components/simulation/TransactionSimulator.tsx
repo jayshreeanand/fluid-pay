@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SimulationConfig, TransactionSimulation } from './types';
 import { Chain } from 'wagmi/chains';
 
@@ -19,6 +19,13 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState<TransactionSimulation | null>(null);
 
+  // Add logging for initial state and chain values
+  useEffect(() => {
+    console.log('Initial chains:', chains);
+    console.log('Initial sourceChain:', sourceChain);
+    console.log('Initial destinationChain:', destinationChain);
+  }, []);
+
   const handleAddRecipient = () => {
     setRecipients([...recipients, { address: '', amount: '' }]);
   };
@@ -28,6 +35,83 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
     newRecipients[index] = { ...newRecipients[index], [field]: value };
     setRecipients(newRecipients);
   };
+
+  const handleQuickFill = () => {
+    console.log('Quickfill button clicked');
+    console.log('Current state:', {
+      type,
+      sourceChain,
+      destinationChain,
+      amount,
+      recipients,
+      frequency
+    });
+
+    try {
+      // Test addresses (these are example addresses, not real ones)
+      const testAddresses = {
+        recipient1: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+        recipient2: '0x742d35Cc6634C0532925a3b844Bc454e4438f44f',
+        recipient3: '0x742d35Cc6634C0532925a3b844Bc454e4438f44g',
+      };
+
+      console.log('Available chains:', chains);
+
+      // Create a new state object to batch updates
+      const newState = {
+        sourceChain: chains[0]?.id.toString() || '',
+        destinationChain: chains[1]?.id.toString() || '',
+        amount: '',
+        recipients: [] as { address: string; amount: string }[],
+        frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
+      };
+
+      // Set values based on transaction type
+      switch (type) {
+        case 'one-time':
+          newState.amount = '1.5';
+          newState.recipients = [{ address: testAddresses.recipient1, amount: '1.5' }];
+          break;
+        case 'recurring':
+          newState.amount = '0.5';
+          newState.recipients = [{ address: testAddresses.recipient1, amount: '0.5' }];
+          newState.frequency = 'weekly';
+          break;
+        case 'multi-recipient':
+          newState.amount = '3.0';
+          newState.recipients = [
+            { address: testAddresses.recipient1, amount: '1.0' },
+            { address: testAddresses.recipient2, amount: '1.0' },
+            { address: testAddresses.recipient3, amount: '1.0' },
+          ];
+          break;
+      }
+
+      // Apply all state updates
+      setSourceChain(newState.sourceChain);
+      setDestinationChain(newState.destinationChain);
+      setAmount(newState.amount);
+      setRecipients(newState.recipients);
+      setFrequency(newState.frequency);
+      setSimulationResult(null);
+
+      console.log('Quickfill completed. New state:', newState);
+    } catch (error) {
+      console.error('Error in quickfill:', error);
+    }
+  };
+
+  // Add effect to log state changes
+  useEffect(() => {
+    console.log('State updated:', {
+      type,
+      sourceChain,
+      destinationChain,
+      amount,
+      recipients,
+      frequency
+    });
+  }, [type, sourceChain, destinationChain, amount, recipients, frequency]);
 
   const handleSimulate = async () => {
     setIsSimulating(true);
@@ -52,6 +136,16 @@ export function TransactionSimulator({ chains, onSimulate }: TransactionSimulato
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900">Configure Transaction</h3>
+        <button
+          onClick={handleQuickFill}
+          className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-500 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors duration-200"
+        >
+          Quick Fill Demo Values
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
