@@ -2,6 +2,9 @@
 
 Fluid Pay is a modern web3 application that enables seamless cross-chain payments between different blockchain networks. Built with Next.js, TypeScript, and Tailwind CSS, it provides a user-friendly interface for sending payments across chains. The application leverages Espresso Decaf test and Arbitrum Sepolia rollup for enhanced transaction processing and security.
 
+<img width="1635" alt="fluid pay" src="https://github.com/user-attachments/assets/c2f42b96-a3fa-4f03-8caf-ffbc4a311bad" />
+
+
 ## 🌟 Features
 
 - **Cross-Chain Payments**: Send payments between different blockchain networks
